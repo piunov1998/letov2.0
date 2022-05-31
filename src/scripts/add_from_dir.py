@@ -3,14 +3,14 @@ import sys
 import hashlib
 
 
-def insert_music(music_dir: str = '../../music'):
+def insert_music(music_dir: str = '../music'):
     sys.path.append('..')
 
     from injectors import connections
     from models.music import Song
 
     block_size = 65536
-    pg = connections.accuire_session()
+    pg = connections.acquire_session()
     for file in os.listdir(music_dir):
         spited = file.split('.')
         name, ext = '.'.join(spited[:-1]), spited[-1]

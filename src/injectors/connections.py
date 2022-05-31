@@ -1,11 +1,9 @@
-from msilib.schema import tables
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, Session
 
 from config import config
 from models.orm import BaseOrm
 import models.music
-
 
 
 def create_engine(db: str = None) -> sa.engine.Engine:
@@ -18,10 +16,10 @@ def create_engine(db: str = None) -> sa.engine.Engine:
         port=config.pg.port,
         database=db or config.pg.database
     )
-    return sa.create_engine(url=url, echo=True)
+    return sa.create_engine(url=url, echo=False)
 
 
-def accuire_session() -> Session:
+def acquire_session() -> Session:
 
     session = sessionmaker(bind=create_engine(), autoflush=False)
     session.begin()

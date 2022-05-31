@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from discord.ext import commands
 from discord.utils import get
 
-from injectors.connections import accuire_session
+from injectors.connections import acquire_session
 from models.music import Song
 
 
@@ -14,8 +14,8 @@ class Music(commands.Cog):
     def __init__(self, bot: commands.Bot):
 
         self.bot = bot
-        self.pg = accuire_session()
-        self._music_volume = 0.05
+        self.pg = acquire_session()
+        self._music_volume = 0.06
 
     @classmethod
     def format_message(cls, msg, **_):
