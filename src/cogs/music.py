@@ -1,15 +1,17 @@
+import math
 import os.path
 from asyncio import run_coroutine_threadsafe, CancelledError
+from datetime import datetime
 
 import discord
 import sqlalchemy as sa
 from discord.ext import commands
 from discord.utils import get
-from yt_dlp import YoutubeDL
 from youtube_search import YoutubeSearch
+from yt_dlp import YoutubeDL
 
 from injectors.connections import acquire_session
-from models.music import Song
+from models.music import Song, Playback
 
 MUSIC_PATH = '../music'
 
@@ -20,7 +22,16 @@ class Music(commands.Cog):
 
         self.bot = bot
         self.pg = acquire_session()
-        self._music_volume = 0.06
+        self._music_volume = 0.05
+
+    @property
+    def music_volume_exp(self) -> int:
+        return (math.pow(self._music_volume, math.exp(-1)) * 100).__trunc__()
+
+    @music_volume_exp.setter
+    def music_volume_exp(self, volume: int):
+        self._music_volume = \
+            math.pow(min(max(0, volume), 100) / 100, math.exp(1))
 
     @classmethod
     def format_message(cls, msg, **_):
@@ -38,6 +49,9 @@ class Music(commands.Cog):
         embed.colour = color
         if url:
             embed.url = url
+        if len(embed) >= 6000:
+            await ctx.send(embed=discord.Embed(
+                discription='Message overflow', colour=discord.Colour.red()))
         await ctx.send(embed=embed)
 
     @classmethod
@@ -69,6 +83,16 @@ class Music(commands.Cog):
             url = f'https://www.youtube.com{video["url_suffix"]}'
         return title, url
 
+    def log(self, user: str, song_id: int):
+        pb = Playback(song_id, user, datetime.now())
+        self.pg.add(pb)
+        self.pg.commit()
+
+    async def connect(self, ctx: commands.Context):
+        status = get(self.bot.voice_clients, guild=ctx.guild)
+        if not status:
+            await ctx.author.voice.channel.connect()
+
     @classmethod
     async def disconnect(cls, ctx: commands.Context):
         await ctx.voice_client.disconnect()
@@ -84,15 +108,21 @@ class Music(commands.Cog):
         self.pg.add(song)
         self.pg.commit()
         await self.send_embed(
-            ctx, f'Added {song.name} ', color=discord.Colour.blurple())
+            ctx, f'Added **{song.name}**', color=discord.Colour.blurple())
         return song
 
     @commands.command()
-    async def list(self, ctx: commands.Context):
-        songs = self.pg.execute(sa.select(Song)).scalars().all()
+    async def list(self, ctx: commands.Context, *args: str):
+        if args:
+            kw = '%'.join(args)
+            query = sa.select(Song).filter(
+                Song.name.ilike(f'%{kw}%')).order_by(Song.name)  # noqa
+        else:
+            query = sa.select(Song).order_by(Song.id)
+        songs = self.pg.execute(query).scalars().all()
         description = ''
-        for i, song in enumerate(songs):
-            description += f'{i + 1}. {song.name}\n'
+        for song in songs:
+            description += f'{song.id}. {song.name}\n'
         await self.send_embed(
             ctx, description,
             title='Song list',
@@ -111,15 +141,17 @@ class Music(commands.Cog):
             await ctx.send(self.format_message('Nothing to stop'))
 
     @commands.command()
-    async def play(self, ctx: commands.Context, ident: int):
-        status = get(self.bot.voice_clients, guild=ctx.guild)
-        try:
-            if not status:
-                await ctx.author.voice.channel.connect()
-        except AttributeError:
-            await ctx.send(self.format_message(
-                'Connect to a voice channel before playing.'))
-            return
+    async def play(self, ctx: commands.Context, *args: str):
+
+        if len(args) == 1 and args[0].isnumeric():
+            song = self.get_song_db(int(args[0]))
+        else:
+            kw = '%'.join(args)
+            song = self.pg.execute(
+                sa.select(Song).filter(
+                    Song.name.ilike(f'%{kw}%'))).scalars().first()  # noqa
+        if song is None:
+            song = await self.add(ctx, *args)
 
         def after_play(error):
             if error:
@@ -130,18 +162,19 @@ class Music(commands.Cog):
             future = run_coroutine_threadsafe(
                 self.disconnect(ctx), self.bot.loop)
             try:
-                future.result()
+                future.result(10)
             except CancelledError:
                 print('Pizda')
 
-        song = self.get_song_db(ident)
         if song.filename:
             source = os.path.join(MUSIC_PATH, song.filename)
             ffmpeg_opts = {}
         elif song.url:
             _, source = self.get_audio_url(song.url)
             ffmpeg_opts = {
-                'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
+                'before_options': '-reconnect 1 '
+                                  '-reconnect_streamed 1 '
+                                  '-reconnect_delay_max 5',
                 'options': '-vn'
             }
         else:
@@ -149,11 +182,46 @@ class Music(commands.Cog):
                 ctx, 'Source not found', color=discord.Colour.red())
             return
 
+        try:
+            await self.connect(ctx)
+        except AttributeError:
+            await self.send_embed(
+                ctx, 'Connect to a voice channel before playing.',
+                color=discord.Colour.red())
+            return
+
+        await self.send_embed(ctx, f'Playing **{song.name}**')
+        self.log(ctx.author.nick, song.id)
+
         ctx.voice_client.play(
             discord.PCMVolumeTransformer(
                 discord.FFmpegPCMAudio(
                     source, **ffmpeg_opts
                 ), self._music_volume), after=after_play)
+
+    @commands.command(aliases=['v'])
+    async def volume(self, ctx: commands.Context, volume: str = None):
+        if volume is None:
+            await self.send_embed(
+                ctx, f'Current volume is **{self.music_volume_exp}%**')
+            return
+        if volume.startswith(('+', '-')) and volume[1:].isnumeric():
+            match volume[0], volume[1:]:
+                case '+', val:
+                    self.music_volume_exp += int(val)
+                case '-', val:
+                    self.music_volume_exp -= int(val)
+        elif volume.isnumeric():
+            self.music_volume_exp = int(volume)
+        else:
+            await self.send_embed(
+                ctx, 'Incorrect arguments', color=discord.Colour.red())
+            return
+        await self.send_embed(
+            ctx, f'Volume set to **{self.music_volume_exp}%**',
+            color=discord.Colour.from_rgb(227, 178, 43))
+        if ctx.voice_client is not None and ctx.voice_client.is_playing():
+            ctx.voice_client.source.volume = self._music_volume
 
 
 def setup(bot: commands.Bot):

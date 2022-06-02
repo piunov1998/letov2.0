@@ -25,7 +25,8 @@ class Song(BaseOrm):
     })
 
     id: t.Optional[int] = dc.field(default=None, metadata={
-        'sa': sa.Column(sa.Integer, primary_key=True, unique=True, autoincrement=True)
+        'sa': sa.Column(
+            sa.Integer, primary_key=True, unique=True, autoincrement=True)
     })
 
 
@@ -35,7 +36,8 @@ class Playback(BaseOrm):
     __table_args__ = {'schema': 'music'}
 
     song: int = dc.field(metadata={
-        'sa': sa.Column(sa.Integer, sa.ForeignKey('music.music.id'))
+        'sa': sa.Column(
+            sa.Integer, sa.ForeignKey('music.music.id', onupdate='CASCADE'))
     })
 
     user: str = dc.field(metadata={
@@ -43,7 +45,7 @@ class Playback(BaseOrm):
     })
 
     date: datetime = dc.field(default_factory=datetime, metadata={
-        'sa': sa.Column(sa.Date)
+        'sa': sa.Column(sa.TIMESTAMP)
     })
 
     id: t.Optional[int] = dc.field(default=None, metadata={
