@@ -5,7 +5,7 @@ class TextColors:
 
     @property
     def header(self):
-        return '\033[95m'
+        return '\033[47;30m'
 
     @property
     def bold(self):

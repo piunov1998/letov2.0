@@ -10,6 +10,9 @@ from models.colors import TextColors
 
 config = config.discord
 tc = TextColors()
+dis_logger = logging.getLogger('discord')
+dis_logger.setLevel(logging.ERROR)
+
 logging.basicConfig(
     level=logging.INFO,
     format='[%(asctime)s]: %(message)s',
@@ -68,10 +71,10 @@ async def on_command_error(ctx: commands.Context, error: Exception):
                          color=discord.Colour.red()
                          )
         logging.error(
-            f'{tc.header}{tc.underline}Error occurred{tc.end}\n'
-            f'{tc.bold}Command: {ctx.command}{tc.end}\n'
-            f'{tc.bold}Error log:{tc.end}\n'
-            f'{tc.red}{error}{tc.end}')
+            f'''{tc.bold}{tc.header}Error occurred{tc.end}
+            {tc.bold}{tc.underline}Command:{tc.end} {ctx.command}
+            {tc.bold}{tc.underline}Error log:{tc.end}
+            {tc.red}{error}{tc.end}''')
 
 
 for filename in os.listdir('./cogs'):
