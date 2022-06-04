@@ -11,7 +11,7 @@ from models.colors import TextColors
 config = config.discord
 tc = TextColors()
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='[%(asctime)s]: %(message)s',
     datefmt='%H:%M:%S'
 )
