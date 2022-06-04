@@ -6,9 +6,15 @@ from discord.ext import commands
 
 from config import config
 from injectors import connections
-from models.colors import TextColors as tc
+from models.colors import TextColors
 
 config = config.discord
+tc = TextColors()
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='[%(asctime)s]: %(message)s',
+    datefmt='%H:%M:%S'
+)
 
 bot = commands.Bot(
     command_prefix=config.prefix,

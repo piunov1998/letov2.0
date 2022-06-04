@@ -1,5 +1,8 @@
 class TextColors:
 
+    def __init__(self):
+        pass
+
     @property
     def header(self):
         return '\033[95m'
