@@ -270,6 +270,7 @@ class Music(commands.Cog):
                 if not (len(args) == 1 and args[0].isnumeric()):
                     await self.send_embed(
                         ctx, 'This is not id', color=discord.Colour.red())
+                    return
                 q = self.pg.execute(
                     sa.select(
                         QueuePos).where(QueuePos.id == args[0])).scalar_one()
