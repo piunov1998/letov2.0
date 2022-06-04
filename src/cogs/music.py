@@ -128,6 +128,17 @@ class Music(commands.Cog):
         return song
 
     @commands.command()
+    async def remove(self, ctx: commands.Context, song_id: str):
+        if not song_id.isnumeric():
+            await self.send_embed(
+                ctx, 'Incorrect argument', color=discord.Colour.red())
+            return
+        song = self.pg.execute(
+            sa.select(Song).where(Song.id == int(song_id))).scalar_one_or_none()
+        self.pg.delete(song)
+        self.pg.commit()
+
+    @commands.command()
     async def list(self, ctx: commands.Context, *args: str):
         if args:
             kw = '%'.join(args)
