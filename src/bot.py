@@ -37,7 +37,7 @@ async def on_ready():
     connections.init_db()
     if not os.path.exists('../music'):
         os.mkdir('../music')
-    print('Ready!')
+    print('\033[92mReady!\033[0m')
 
 
 @bot.event
@@ -59,10 +59,9 @@ async def on_command_error(ctx: commands.Context, error: Exception):
                          f'{ctx.author.nick}, idi nahui',
                          color=discord.Colour.red()
                          )
-        print(f"""
-            Command: {ctx.command}
-            Error log:
-            {error}""")
+        print(f'Command: {ctx.command}\n'
+              f'Error log:\n'
+              f'\033[91m{error}\033[0m')
 
 
 for filename in os.listdir('./cogs'):
