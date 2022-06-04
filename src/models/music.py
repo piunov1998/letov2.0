@@ -38,7 +38,8 @@ class Playback(BaseOrm):
 
     song: int = dc.field(metadata={
         'sa': sa.Column(
-            sa.Integer, sa.ForeignKey('music.music.id', onupdate='CASCADE'))
+            sa.Integer, sa.ForeignKey(
+                'music.music.id', onupdate='CASCADE', ondelete='CASCADE'))
     })
 
     user: str = dc.field(metadata={
