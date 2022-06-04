@@ -11,7 +11,7 @@ from youtube_search import YoutubeSearch
 from yt_dlp import YoutubeDL
 
 from injectors.connections import acquire_session
-from models.music import Song, Playback
+from models.music import Song, Playback, QueuePos
 
 MUSIC_PATH = '../music'
 
@@ -68,9 +68,22 @@ class Music(commands.Cog):
         url = song_format['url']
         return title, url
 
-    def get_song_db(self, ident: str | int) -> Song:
+    def get_first_in_queue(self) -> QueuePos:
         return self.pg.execute(
-            sa.select(Song).where(Song.id == ident)).scalar_one_or_none()
+            sa.select(QueuePos).order_by(QueuePos.id)).scalars().first()  # noqa
+
+    def get_song_db(self, *args) -> Song:
+
+        if len(args) == 1 and args[0].isnumeric():
+            song = self.pg.execute(
+                sa.select(Song).where(Song.id == args[0])).scalar_one_or_none()
+        else:
+            kw = '%'.join(args)
+            song = self.pg.execute(
+                sa.select(Song).filter(
+                    Song.name.ilike(f'%{kw}%'))).scalars().first()  # noqa
+
+        return song
 
     def get_song_yt(self, arg: str) -> tuple[str, str]:
         if arg.startswith('http'):
@@ -140,27 +153,34 @@ class Music(commands.Cog):
         except AttributeError:
             await ctx.send(self.format_message('Nothing to stop'))
 
-    @commands.command()
+    @commands.command(name='play')
     async def play(self, ctx: commands.Context, *args: str):
 
-        if len(args) == 1 and args[0].isnumeric():
-            song = self.get_song_db(int(args[0]))
-        else:
-            kw = '%'.join(args)
-            song = self.pg.execute(
-                sa.select(Song).filter(
-                    Song.name.ilike(f'%{kw}%'))).scalars().first()  # noqa
-        if song is None:
-            song = await self.add(ctx, *args)
+        if args:
+            await self.queue(ctx, 'add', *args)
+        q = self.get_first_in_queue()
+        await self.player(ctx, q.song)
+
+    async def player(self, ctx: commands.Context, song: Song = None):
 
         def after_play(error):
+            self.pg.delete(self.get_first_in_queue())
+            self.pg.commit()
+
             if error:
                 print(error)
+                return
             vc = get(self.bot.voice_clients, guild=ctx.guild)
             if not vc:
                 return
+
+            q = self.get_first_in_queue()
+            if q is None:
+                coro = self.disconnect(ctx)
+            else:
+                coro = self.player(ctx, q.song)
             future = run_coroutine_threadsafe(
-                self.disconnect(ctx), self.bot.loop)
+                coro, self.bot.loop)
             try:
                 future.result(10)
             except CancelledError:
@@ -222,6 +242,33 @@ class Music(commands.Cog):
             color=discord.Colour.from_rgb(227, 178, 43))
         if ctx.voice_client is not None and ctx.voice_client.is_playing():
             ctx.voice_client.source.volume = self._music_volume
+
+    @commands.command(aliases=['q'])
+    async def queue(self, ctx: commands.Context, act: str = None, *args: str):
+        match act:
+            case 'add':
+                song = self.get_song_db(*args)
+                if song is None:
+                    song = await self.add(ctx, *args)
+                self.pg.add(QueuePos(song))
+                await self.send_embed(ctx, f'**{song.name}** added to queue')
+            case 'del':
+                if not (len(args) == 1 and args[0].isnumeric()):
+                    await self.send_embed(
+                        ctx, 'This is not id', color=discord.Colour.red())
+                q = self.pg.execute(
+                    sa.select(
+                        QueuePos).where(QueuePos.id == args[0])).scalar_one()
+                self.pg.delete(q)
+                await self.send_embed(
+                    ctx, f'**{q.song.name}** removed from queue')
+            case None:
+                q = self.pg.execute(sa.select(QueuePos)).scalars().all()
+                msg = ''
+                for pos in q:
+                    msg += f'{pos.id}.  {pos.song.name}\n'
+                await self.send_embed(ctx, msg, title='Queue')
+        self.pg.commit()
 
 
 def setup(bot: commands.Bot):

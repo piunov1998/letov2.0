@@ -2,8 +2,8 @@ import os
 
 from discord.ext import commands
 
-from injectors import connections
 from config import config
+from injectors import connections
 
 config = config.discord
 

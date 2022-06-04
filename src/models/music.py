@@ -3,6 +3,7 @@ import typing as t
 from datetime import datetime
 
 import sqlalchemy as sa
+from sqlalchemy.orm import relation
 
 from .orm import BaseOrm
 
@@ -53,5 +54,29 @@ class Playback(BaseOrm):
     })
 
 
+@dc.dataclass
+class QueuePos(BaseOrm):
+    __tablename__ = 'queue'
+    __table_args__ = {'schema': 'music'}
+
+    song: Song = dc.field(metadata={
+        'sa': relation(lambda: Song)
+    })
+
+    song_id: t.Optional[int] = dc.field(default=None, metadata={
+        'sa': sa.Column(sa.Integer, sa.ForeignKey(
+            'music.music.id', onupdate='CASCADE', ondelete='CASCADE'))
+    })
+
+    id: t.Optional[int] = dc.field(default=None, metadata={
+        'sa': sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    })
+
+    def __post_init__(self):
+        if self.song_id is None:
+            self.song_id = self.song.id
+
+
 BaseOrm.REGISTRY.mapped(Song)
 BaseOrm.REGISTRY.mapped(Playback)
+BaseOrm.REGISTRY.mapped(QueuePos)
