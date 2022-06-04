@@ -72,11 +72,14 @@ class Music(commands.Cog):
         return self.pg.execute(
             sa.select(QueuePos).order_by(QueuePos.id)).scalars().first()  # noqa
 
-    def get_song_db(self, *args) -> Song:
+    def get_song_db(self, *args: str) -> Song:
 
         if len(args) == 1 and args[0].isnumeric():
             song = self.pg.execute(
                 sa.select(Song).where(Song.id == args[0])).scalar_one_or_none()
+        elif len(args) == 1 and args[0].startswith('http'):
+            song = self.pg.execute(
+                sa.select(Song).where(Song.url == args[0])).scalar_one_or_none()
         else:
             kw = '%'.join(args)
             song = self.pg.execute(

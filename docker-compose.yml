@@ -1,0 +1,19 @@
+version: "3"
+
+services:
+  bot:
+    image: letov
+    links:
+      - postgres
+    volumes:
+      - C:/Users/Tony/github/letov2.0/src:/app/src
+      - C:/Users/Tony/github/letov2.0/config.yaml:/config.yaml
+      - C:/Users/Tony/github/letov2.0/music:/app/src/music
+
+  postgres:
+    image: postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5431:5432"
