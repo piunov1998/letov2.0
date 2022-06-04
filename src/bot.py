@@ -1,3 +1,4 @@
+import logging
 import os
 
 import discord
@@ -5,6 +6,7 @@ from discord.ext import commands
 
 from config import config
 from injectors import connections
+from models.colors import TextColors as tc
 
 config = config.discord
 
@@ -33,11 +35,11 @@ async def send_embed(ctx: commands.Context, msg: str, *,
 
 @bot.event
 async def on_ready():
-    print('initializing db')
+    logging.info('initializing db')
     connections.init_db()
     if not os.path.exists('../music'):
         os.mkdir('../music')
-    print('\033[92mReady!\033[0m')
+    logging.info(f'{tc.green}Ready!{tc.end}')
 
 
 @bot.event
@@ -59,17 +61,19 @@ async def on_command_error(ctx: commands.Context, error: Exception):
                          f'{ctx.author.nick}, idi nahui',
                          color=discord.Colour.red()
                          )
-        print(f'Command: {ctx.command}\n'
-              f'Error log:\n'
-              f'\033[91m{error}\033[0m')
+        logging.error(
+            f'{tc.header}{tc.underline}Error occurred{tc.end}\n'
+            f'{tc.bold}Command: {ctx.command}{tc.end}\n'
+            f'{tc.bold}Error log:{tc.end}\n'
+            f'{tc.red}{error}{tc.end}')
 
 
 for filename in os.listdir('./cogs'):
     if filename.endswith('.py'):
         bot.load_extension(f'cogs.{filename[:-3]}')
-        print(f'Module {filename[:-3]} loaded')
+        logging.info(f'Module {filename[:-3]} loaded')
 
-print('Connecting to gateway...')
+logging.info('Connecting to gateway')
 
 if __name__ == '__main__':
     bot.run(config.token)
