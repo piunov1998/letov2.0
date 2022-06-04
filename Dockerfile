@@ -8,6 +8,8 @@ COPY requirements.txt requirements.txt
 RUN pip install pip --upgrade
 RUN pip install --no-cache-dir -r requirements.txt
 
+ENV PYTHONUNBUFFERED=1
+
 COPY . .
 COPY ./src ./src
 
