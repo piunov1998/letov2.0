@@ -1,8 +1,8 @@
 import dataclasses as dc
 import typing as t
 
-from dataclass_factory import Factory
 import yaml
+from dataclass_factory import Factory
 
 
 @dc.dataclass

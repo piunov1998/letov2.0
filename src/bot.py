@@ -15,6 +15,7 @@ bot = commands.Bot(
 
 @bot.event
 async def on_ready():
+    print('initializing db')
     connections.init_db()
     if not os.path.exists('../music'):
         os.mkdir('../music')
