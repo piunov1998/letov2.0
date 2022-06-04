@@ -132,6 +132,7 @@ dmypy.json
 
 # user config
 config.yaml
+docker-compose.yml
 
 # music path
 music
