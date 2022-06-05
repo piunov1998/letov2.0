@@ -4,9 +4,11 @@ from asyncio import run_coroutine_threadsafe, CancelledError
 from datetime import datetime
 
 import discord
+import psycopg2.errorcodes
 import sqlalchemy as sa
 from discord.ext import commands
 from discord.utils import get
+from sqlalchemy.exc import IntegrityError
 from youtube_search import YoutubeSearch
 from yt_dlp import YoutubeDL
 
@@ -19,9 +21,8 @@ MUSIC_PATH = '../music'
 class Music(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-
-        self.bot = bot
         self.pg = acquire_session()
+        self.bot = bot
         self._music_volume = 0.05
 
     @property
@@ -121,8 +122,18 @@ class Music(commands.Cog):
             name=title,
             url=url
         )
-        self.pg.add(song)
-        self.pg.commit()
+        with self.pg:
+            try:
+                self.pg.add(song)
+                self.pg.commit()
+            except IntegrityError as e:
+                if e.orig.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
+                    self.pg.rollback()
+                    await self.send_embed(
+                        ctx, 'Song with this source is already in database',
+                        color=discord.Colour.red())
+                    return self.get_song_db(*args)
+                raise
         await self.send_embed(
             ctx, f'Added **{song.name}**', color=discord.Colour.blurple())
         return song
@@ -171,6 +182,8 @@ class Music(commands.Cog):
     async def play(self, ctx: commands.Context, *args: str):
 
         if args:
+            self.pg.execute('TRUNCATE music.queue;')
+            self.pg.commit()
             await self.queue(ctx, 'add', *args)
         q = self.get_first_in_queue()
         await self.player(ctx, q.song)
