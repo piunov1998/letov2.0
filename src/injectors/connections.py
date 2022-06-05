@@ -21,6 +21,7 @@ def create_engine(db: str = None) -> sa.engine.Engine:
 def acquire_session() -> Session:
 
     session = sessionmaker(bind=create_engine(), autoflush=False)
+    session.begin()
     return session()
 
 

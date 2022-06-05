@@ -122,18 +122,17 @@ class Music(commands.Cog):
             name=title,
             url=url
         )
-        with self.pg:
-            try:
-                self.pg.add(song)
-                self.pg.commit()
-            except IntegrityError as e:
-                if e.orig.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
-                    self.pg.rollback()
-                    await self.send_embed(
-                        ctx, 'Song with this source is already in database',
-                        color=discord.Colour.red())
-                    return self.get_song_db(*args)
-                raise
+        try:
+            self.pg.add(song)
+            self.pg.commit()
+        except IntegrityError as e:
+            self.pg.rollback()
+            if e.orig.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
+                await self.send_embed(
+                    ctx, 'Song with this source is already in database',
+                    color=discord.Colour.red())
+                return self.get_song_db(*args)
+            raise
         await self.send_embed(
             ctx, f'Added **{song.name}**', color=discord.Colour.blurple())
         return song
