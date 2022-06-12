@@ -175,7 +175,8 @@ class Music(commands.Cog):
         try:
             await self.disconnect(ctx)
         except AttributeError:
-            await ctx.send(self.format_message('Nothing to stop'))
+            await self.send_embed(
+                ctx, 'Nothing to stop', color=discord.Colour.red())
 
     @commands.command(name='play')
     async def play(self, ctx: commands.Context, *args: str):
