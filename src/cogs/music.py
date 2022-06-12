@@ -134,7 +134,7 @@ class Music(commands.Cog):
                 return self.get_song_db(*args)
             raise
         await self.send_embed(
-            ctx, f'Added **{song.name}**', color=discord.Colour.blurple())
+            ctx, f'Added **{song.name}**', color=discord.Colour.green())
         return song
 
     @commands.command()
@@ -147,6 +147,10 @@ class Music(commands.Cog):
             sa.select(Song).where(Song.id == int(song_id))).scalar_one_or_none()
         self.pg.delete(song)
         self.pg.commit()
+        await self.send_embed(
+            ctx, f'**{song.name} has been removed**',
+            color=discord.Colour.green()
+        )
 
     @commands.command()
     async def list(self, ctx: commands.Context, *args: str):
