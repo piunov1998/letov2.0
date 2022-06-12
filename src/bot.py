@@ -28,7 +28,8 @@ bot = commands.Bot(
 async def send_embed(ctx: commands.Context, msg: str, *,
                      title: str = None,
                      color: discord.Colour = discord.Colour.blue(),
-                     url: str = None):
+                     url: str = None,
+                     img: str = None):
     embed = discord.Embed()
     if title:
         embed.title = title
@@ -36,6 +37,8 @@ async def send_embed(ctx: commands.Context, msg: str, *,
     embed.colour = color
     if url:
         embed.url = url
+    if img:
+        embed.set_image(url=img)
     if len(embed) >= 6000:
         await ctx.send(embed=discord.Embed(
             discription='Message overflow', colour=discord.Colour.red()))
@@ -66,9 +69,12 @@ async def on_command_error(ctx: commands.Context, error: Exception):
     elif isinstance(error, commands.NotOwner):
         await ctx.send(f"Error: {error}")
     else:
+        img_url = 'https://drive.google.com/file/d/' \
+                  '10hKPS_CvVXvZilwI48adet0bnpXmZbHO/view?usp=sharing'
         await send_embed(ctx,
-                         f'{ctx.author.nick}, idi nahui',
-                         color=discord.Colour.red()
+                         f'{ctx.author.nick},',
+                         color=discord.Colour.red(),
+                         img=img_url
                          )
         logging.error(
             f'''{tc.bold}{tc.header}Error occurred{tc.end}

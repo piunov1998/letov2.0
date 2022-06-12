@@ -42,7 +42,9 @@ class Music(commands.Cog):
     async def send_embed(cls, ctx: commands.Context, msg: str, *,
                          title: str = None,
                          color: discord.Colour = discord.Colour.blue(),
-                         url: str = None):
+                         url: str = None,
+                         img: str = None
+                         ):
         embed = discord.Embed()
         if title:
             embed.title = title
@@ -50,6 +52,8 @@ class Music(commands.Cog):
         embed.colour = color
         if url:
             embed.url = url
+        if img:
+            embed.set_image(url=img)
         if len(embed) >= 6000:
             await ctx.send(embed=discord.Embed(
                 discription='Message overflow', colour=discord.Colour.red()))
