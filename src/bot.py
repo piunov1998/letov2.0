@@ -69,8 +69,7 @@ async def on_command_error(ctx: commands.Context, error: Exception):
     elif isinstance(error, commands.NotOwner):
         await ctx.send(f"Error: {error}")
     else:
-        img_url = 'https://drive.google.com/file/d/' \
-                  '10hKPS_CvVXvZilwI48adet0bnpXmZbHO/view?usp=sharing'
+        img_url = 'https://i.ibb.co/Pc7W8k9/index.jpg'
         await send_embed(ctx,
                          f'{ctx.author.nick},',
                          color=discord.Colour.red(),
