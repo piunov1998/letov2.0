@@ -56,7 +56,10 @@ async def on_ready():
 
 
 @bot.event
-async def on_command_error(ctx: commands.Context, error: Exception):
+async def on_command_error(
+        ctx: commands.Context,
+        error: commands.CommandInvokeError
+):
     if isinstance(error, commands.CommandNotFound):
         await send_embed(
             ctx, f'Command not found, use {bot.command_prefix}help.',
@@ -69,8 +72,8 @@ async def on_command_error(ctx: commands.Context, error: Exception):
             """, color=discord.Colour.red())
     elif isinstance(error, commands.NotOwner):
         await ctx.send(f"Error: {error}")
-    elif isinstance(error, BotException):
-        await send_embed(ctx, error.msg, color=discord.Colour.red())
+    elif isinstance(error.original, BotException):
+        await send_embed(ctx, error.original.msg, color=discord.Colour.red())
     else:
         img_url = 'https://i.ibb.co/Pc7W8k9/index.jpg'
         await send_embed(ctx,
