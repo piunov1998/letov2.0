@@ -1,5 +1,6 @@
 import math
 import os.path
+import re
 from asyncio import run_coroutine_threadsafe, CancelledError
 from datetime import datetime
 
@@ -13,6 +14,7 @@ from youtube_search import YoutubeSearch
 from yt_dlp import YoutubeDL
 
 from injectors.connections import acquire_session
+from models.exceptions import WrongURL
 from models.music import Song, Playback, QueuePos
 
 MUSIC_PATH = '../music'
@@ -37,6 +39,11 @@ class Music(commands.Cog):
     @classmethod
     def format_message(cls, msg, **_):
         return f'```{msg}```'
+
+    @classmethod
+    def validate_url(cls, url):
+        if not re.fullmatch(r'https?://(?:www)?youtu(?:\.be|be\.com)/\S+', url):
+            raise WrongURL('Invalid URL was given')
 
     @classmethod
     async def send_embed(cls, ctx: commands.Context, msg: str, *,
@@ -96,6 +103,7 @@ class Music(commands.Cog):
     def get_song_yt(self, arg: str) -> tuple[str, str]:
         if arg.startswith('http'):
             url = arg
+            self.validate_url(url)
             title, _ = self.get_audio_url(url)
         else:
             res = YoutubeSearch(arg, 1)

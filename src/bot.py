@@ -7,6 +7,7 @@ from discord.ext import commands
 from config import config
 from injectors import connections
 from models.colors import TextColors
+from models.exceptions import BotException
 
 config = config.discord
 tc = TextColors()
@@ -68,6 +69,8 @@ async def on_command_error(ctx: commands.Context, error: Exception):
             """, color=discord.Colour.red())
     elif isinstance(error, commands.NotOwner):
         await ctx.send(f"Error: {error}")
+    elif isinstance(error, BotException):
+        await send_embed(ctx, error.msg, color=discord.Colour.red())
     else:
         img_url = 'https://i.ibb.co/Pc7W8k9/index.jpg'
         await send_embed(ctx,
