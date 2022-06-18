@@ -61,7 +61,7 @@ class Music(commands.Cog):
 
     @classmethod
     def get_audio_url(cls, link: str) -> tuple[str, str]:
-        ydl_opts = {'format': 'bestaudio'}
+        ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
 
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(link, download=False)
