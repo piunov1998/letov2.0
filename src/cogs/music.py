@@ -42,7 +42,7 @@ class Music(commands.Cog):
 
     @classmethod
     def validate_url(cls, url):
-        if not re.fullmatch(r'https?://(?:www)?youtu(?:\.be|be\.com)/\S+', url):
+        if not re.fullmatch(r'https?://(?:www\.)?youtu(?:\.be|be\.com)/\S+', url):
             raise WrongURL('Invalid URL was given')
 
     @classmethod
