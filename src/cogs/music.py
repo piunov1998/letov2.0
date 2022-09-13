@@ -182,17 +182,34 @@ class Music(commands.Cog):
             color=discord.Colour.from_rgb(7, 133, 70)
         )
 
-    @commands.command(hidden=True)
-    async def test(self, ctx: commands.Context):
-        self.get_song_yt('barby girl')
-
     @commands.command()
     async def stop(self, ctx: commands.Context):
         try:
             await self.disconnect(ctx)
         except AttributeError:
             await self.send_embed(
-                ctx, 'Nothing to stop', color=discord.Colour.red())
+                ctx, 'Nothing to stop', color=discord.Colour.red()
+            )
+
+    @commands.command(brief='Pauses playback.')
+    async def pause(self, ctx: commands.Context):
+        """Pauses current playback."""
+        if ctx.voice_client is not None and ctx.voice_client.is_playing():
+            ctx.voice_client.pause()
+        else:
+            await self.send_embed(
+                ctx, 'Nothing is playing.', color=discord.Colour.red()
+            )
+
+    @commands.command(brief='Resumes playback')
+    async def resume(self, ctx: commands.Context):
+        """Resumes playback if it was paused."""
+        if ctx.voice_client is not None and ctx.voice_client.is_paused():
+            ctx.voice_client.resume()
+        else:
+            await self.send_embed(
+                ctx, 'Nothing is paused', color=discord.Colour.red()
+            )
 
     @commands.command(name='play')
     async def play(self, ctx: commands.Context, *args: str):
