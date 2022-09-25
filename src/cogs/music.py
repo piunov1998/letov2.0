@@ -214,11 +214,6 @@ class Music(commands.Cog):
     @commands.command(name='play')
     async def play(self, ctx: commands.Context, *args: str):
 
-        if ctx.author.id in [336367172744118274, '336367172744118274']:
-            await self.send_embed(
-                ctx, 'иди в очко', color=discord.Colour.red())
-            return
-
         if args:
             self.pg.execute('TRUNCATE music.queue;')
             self.pg.commit()
