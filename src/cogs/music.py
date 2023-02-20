@@ -46,12 +46,15 @@ class Music(commands.Cog):
             raise WrongURL('Invalid URL was given')
 
     @classmethod
-    async def send_embed(cls, ctx: commands.Context, msg: str, *,
-                         title: str = None,
-                         color: discord.Colour = discord.Colour.blue(),
-                         url: str = None,
-                         img: str = None
-                         ):
+    async def send_embed(
+        cls,
+        ctx: commands.Context, msg: str,
+        *,
+        title: str = None,
+        color: discord.Colour = discord.Colour.blue(),
+        url: str = None,
+        img: str = None
+    ):
         embed = discord.Embed()
         if title:
             embed.title = title
@@ -62,8 +65,12 @@ class Music(commands.Cog):
         if img:
             embed.set_image(url=img)
         if len(embed) >= 6000:
-            await ctx.send(embed=discord.Embed(
-                discription='Message overflow', colour=discord.Colour.red()))
+            await ctx.send(
+                embed=discord.Embed(
+                    description='Message overflow',
+                    colour=discord.Colour.red()
+                )
+            )
         await ctx.send(embed=embed)
 
     @classmethod
@@ -124,7 +131,7 @@ class Music(commands.Cog):
 
     @classmethod
     async def disconnect(cls, ctx: commands.Context):
-        await ctx.voice_client.disconnect()
+        await ctx.voice_client.disconnect(force=False)
 
     @commands.command()
     async def add(self, ctx: commands.Context, *args) -> Song:
@@ -333,5 +340,5 @@ class Music(commands.Cog):
         self.pg.commit()
 
 
-def setup(bot: commands.Bot):
-    bot.add_cog(Music(bot))
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Music(bot))

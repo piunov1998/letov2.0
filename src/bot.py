@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 
@@ -22,7 +23,7 @@ logging.basicConfig(
 
 bot = commands.Bot(
     command_prefix=config.prefix,
-
+    intents=discord.Intents.all()
 )
 
 
@@ -42,7 +43,7 @@ async def send_embed(ctx: commands.Context, msg: str, *,
         embed.set_image(url=img)
     if len(embed) >= 6000:
         await ctx.send(embed=discord.Embed(
-            discription='Message overflow', colour=discord.Colour.red()))
+            description='Message overflow', colour=discord.Colour.red()))
     await ctx.send(embed=embed)
 
 
@@ -88,12 +89,19 @@ async def on_command_error(
             {tc.red}{error}{tc.end}''')
 
 
-for filename in os.listdir('./cogs'):
-    if filename.endswith('.py'):
-        bot.load_extension(f'cogs.{filename[:-3]}')
-        logging.info(f'Module {filename[:-3]} loaded')
+async def setup_extensions():
+    for filename in os.listdir('./cogs'):
+        if filename.endswith('.py'):
+            await bot.load_extension(f'cogs.{filename[:-3]}')
+            logging.info(f'Module {filename[:-3]} loaded')
 
-logging.info('Connecting to gateway')
+
+async def run():
+    async with bot:
+        await setup_extensions()
+        logging.info('Connecting to gateway')
+        await bot.start(config.token)
+
 
 if __name__ == '__main__':
-    bot.run(config.token)
+    asyncio.run(run())
