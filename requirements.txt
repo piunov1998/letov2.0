@@ -4,4 +4,4 @@ dataclass_factory==2.14
 PyYAML==6.0
 psycopg2-binary==2.9.3
 yt-dlp==2023.3.4
-youtube-search==2.1.0
+youtube-search==2.1.2

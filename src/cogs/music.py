@@ -116,7 +116,7 @@ class Music(commands.Cog):
             res = YoutubeSearch(arg, 1)
             video = res.videos[0]
             title = video['title']
-            url = f'https://www.youtube.com{video["url_suffix"]}'
+            url = f'https://youtu.be/{video["id"]}'
         return title, url
 
     def log(self, user: str, song_id: int):
