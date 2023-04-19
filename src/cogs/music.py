@@ -64,7 +64,7 @@ class Music(commands.Cog):
             embed.url = url
         if img:
             embed.set_image(url=img)
-        if len(embed) >= 6000:
+        if len(embed) >= 6000 or len(embed.description) > 4096:
             await ctx.send(
                 embed=discord.Embed(
                     description='Message overflow',
@@ -180,12 +180,26 @@ class Music(commands.Cog):
         else:
             query = sa.select(Song).order_by(Song.id)
         songs = self.pg.execute(query).scalars().all()
+
+        title = 'Song list'
         description = ''
+
         for song in songs:
-            description += f'{song.id}. {song.name}\n'
+            row = f'{song.id}. {song.name}\n'
+            if len(description + row) < 4000:
+                description += row
+                continue
+            else:
+                await self.send_embed(
+                    ctx, description,
+                    title=title,
+                    color=discord.Colour.from_rgb(7, 133, 70)
+                )
+                description = row
+            title = None
         await self.send_embed(
             ctx, description,
-            title='Song list',
+            title=title,
             color=discord.Colour.from_rgb(7, 133, 70)
         )
 
