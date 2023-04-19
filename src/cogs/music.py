@@ -259,7 +259,9 @@ class Music(commands.Cog):
         elif song.url:
             _, source = self.get_audio_url(song.url)
             ffmpeg_opts = {
-                'before_options': '-reconnect 1 '
+                'before_options': '-analyzeduration 0 '
+                                  '-re '
+                                  '-reconnect 1 '
                                   '-reconnect_streamed 1 '
                                   '-reconnect_delay_max 5 ',
                 'options': '-vn '
