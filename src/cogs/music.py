@@ -1,29 +1,29 @@
+import enum
 import math
-import os.path
-import re
 from asyncio import run_coroutine_threadsafe, CancelledError
-from datetime import datetime
 
 import discord
-import psycopg2.errorcodes
-import sqlalchemy as sa
 from discord.ext import commands
 from discord.utils import get
-from sqlalchemy.exc import IntegrityError
-from youtube_search import YoutubeSearch
-from yt_dlp import YoutubeDL
 
-from injectors.connections import acquire_session
-from models.exceptions import WrongURL
-from models.music import Song, Playback, QueuePos
+from adapters import YouTubeAdapter, MusicAdapter
+from models import exceptions
+from models.music import Song, QueuePos
 
 MUSIC_PATH = '../music'
+
+
+class QueueActions(str, enum.Enum):
+    ADD = 'add'
+    DELETE = 'del'
+    LIST = 'list'
 
 
 class Music(commands.Cog):
 
     def __init__(self, bot: commands.Bot):
-        self.pg = acquire_session()
+        self.yt = YouTubeAdapter()
+        self.music = MusicAdapter()
         self.bot = bot
         self._music_volume = 0.05
 
@@ -36,14 +36,17 @@ class Music(commands.Cog):
         self._music_volume = \
             math.pow(min(max(0, volume), 100) / 100, math.exp(1))
 
+    @staticmethod
+    def is_playing(ctx: commands.Context) -> bool:
+        """Проверка идет ли воспроизведение в данный момент"""
+
+        return ctx.voice_client is not None and (
+            ctx.voice_client.is_playing() or ctx.voice_client.is_paused()
+        )
+
     @classmethod
     def format_message(cls, msg, **_):
         return f'```{msg}```'
-
-    @classmethod
-    def validate_url(cls, url):
-        if not re.fullmatch(r'https?://(?:www\.)?youtu(?:\.be|be\.com)/\S+', url):
-            raise WrongURL('Invalid URL was given')
 
     @classmethod
     async def send_embed(
@@ -73,56 +76,20 @@ class Music(commands.Cog):
             )
         await ctx.send(embed=embed)
 
-    @classmethod
-    def get_audio_url(cls, link: str) -> tuple[str, str]:
-        ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
-
-        with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(link, download=False)
-            song_format = next(
-                f for f in info['formats']
-                if f['acodec'] != 'none' and f['vcodec'] == 'none'
-            )
-        title = info['title']
-        url = song_format['url']
-        return title, url
-
-    def get_first_in_queue(self) -> QueuePos:
-        return self.pg.execute(
-            sa.select(QueuePos).order_by(QueuePos.id)).scalars().first()  # noqa
-
-    def get_song_db(self, *args: str) -> Song:
+    def get_saved_song(self, *args: str) -> Song:
+        """Получение сохраненной песни"""
 
         if len(args) == 1 and args[0].isnumeric():
-            song = self.pg.execute(
-                sa.select(Song).where(Song.id == args[0])).scalar_one_or_none()
+            song_id = int(args[0])
+            song = self.music.get_song_by_id(song_id)
         elif len(args) == 1 and args[0].startswith('http'):
-            song = self.pg.execute(
-                sa.select(Song).where(Song.url == args[0])).scalar_one_or_none()
+            url = args[0]
+            song = self.music.get_song_by_url(url)
         else:
-            kw = '%'.join(args)
-            song = self.pg.execute(
-                sa.select(Song).filter(
-                    Song.name.ilike(f'%{kw}%'))).scalars().first()  # noqa
+            key_words = list(args)
+            song = self.music.find_songs(key_words, 1)[0]
 
         return song
-
-    def get_song_yt(self, arg: str) -> tuple[str, str]:
-        if arg.startswith('http'):
-            url = arg
-            self.validate_url(url)
-            title, _ = self.get_audio_url(url)
-        else:
-            res = YoutubeSearch(arg, 1)
-            video = res.videos[0]
-            title = video['title']
-            url = f'https://youtu.be/{video["id"]}'
-        return title, url
-
-    def log(self, user: str, song_id: int):
-        pb = Playback(song_id, user, datetime.now())
-        self.pg.add(pb)
-        self.pg.commit()
 
     async def connect(self, ctx: commands.Context):
         status = get(self.bot.voice_clients, guild=ctx.guild)
@@ -135,37 +102,37 @@ class Music(commands.Cog):
 
     @commands.command()
     async def add(self, ctx: commands.Context, *args) -> Song:
+        """Добавление песни"""
+
         args = ' '.join(args)
-        title, url = self.get_song_yt(args)
-        song = Song(
-            name=title,
-            url=url
-        )
+
+        if self.yt.validate_url(args, safe=True):
+            music_info = self.yt.extract_audio_info(args)
+        else:
+            music_info = self.yt.search(args, 1)
+
         try:
-            self.pg.add(song)
-            self.pg.commit()
-        except IntegrityError as e:
-            self.pg.rollback()
-            if e.orig.pgcode == psycopg2.errorcodes.UNIQUE_VIOLATION:
-                await self.send_embed(
-                    ctx, 'Song with this source is already in database',
-                    color=discord.Colour.red())
-                return self.get_song_db(*args)
-            raise
+            song = self.music.add_song(music_info.title, music_info.url)
+        except exceptions.DuplicateSong as e:
+            await self.send_embed(ctx, str(e), color=discord.Colour.red())
+            return self.get_saved_song(*args)
         await self.send_embed(
             ctx, f'Added **{song.name}**', color=discord.Colour.green())
+
         return song
 
     @commands.command()
     async def remove(self, ctx: commands.Context, song_id: str):
+        """Удаление песни"""
+
         if not song_id.isnumeric():
             await self.send_embed(
                 ctx, 'Incorrect argument', color=discord.Colour.red())
             return
-        song = self.pg.execute(
-            sa.select(Song).where(Song.id == int(song_id))).scalar_one_or_none()
-        self.pg.delete(song)
-        self.pg.commit()
+
+        song = self.music.get_song_by_id(int(song_id))
+        self.music.remove_song(song.id)
+
         await self.send_embed(
             ctx, f'**{song.name} has been removed**',
             color=discord.Colour.green()
@@ -173,13 +140,13 @@ class Music(commands.Cog):
 
     @commands.command()
     async def list(self, ctx: commands.Context, *args: str):
+        """Получение всего списка песен или по ключевым словам"""
+
         if args:
-            kw = '%'.join(args)
-            query = sa.select(Song).filter(
-                Song.name.ilike(f'%{kw}%')).order_by(Song.name)  # noqa
+            key_words = list(args)
+            songs = self.music.find_songs(key_words, order_by=Song.name)
         else:
-            query = sa.select(Song).order_by(Song.id)
-        songs = self.pg.execute(query).scalars().all()
+            songs = self.music.get_songs()
 
         title = 'Song list'
         description = ''
@@ -234,56 +201,25 @@ class Music(commands.Cog):
 
     @commands.command(name='play')
     async def play(self, ctx: commands.Context, *args: str):
+        """Проигрывание музыки"""
+
+        is_playing = self.is_playing(ctx)
 
         if args:
-            self.pg.execute('TRUNCATE music.queue;')
-            self.pg.commit()
-            await self.queue(ctx, 'add', *args)
-        q = self.get_first_in_queue()
-        await self.player(ctx, q.song)
+            if not is_playing:
+                self.music.clear_queue(ctx.guild.id)
 
-    async def player(self, ctx: commands.Context, song: Song = None):
+            await self.queue(ctx, QueueActions.ADD, *args)
 
-        def after_play(error):
-            self.pg.delete(self.get_first_in_queue())
-            self.pg.commit()
+        if is_playing:
+            return
 
-            if error:
-                print(error)
-                return
-            vc = get(self.bot.voice_clients, guild=ctx.guild)
-            if not vc:
-                return
+        q = self.music.get_first_in_queue(ctx.guild.id)
 
-            q = self.get_first_in_queue()
-            if q is None:
-                coro = self.disconnect(ctx)
-            else:
-                coro = self.player(ctx, q.song)
-            future = run_coroutine_threadsafe(
-                coro, self.bot.loop)
-            try:
-                future.result(10)
-            except CancelledError:
-                print('Pizda')
-
-        if song.filename:
-            source = os.path.join(MUSIC_PATH, song.filename)
-            ffmpeg_opts = {}
-        elif song.url:
-            _, source = self.get_audio_url(song.url)
-            ffmpeg_opts = {
-                'before_options': '-analyzeduration 0 '
-                                  '-re '
-                                  '-reconnect 1 '
-                                  '-reconnect_streamed 1 '
-                                  '-reconnect_delay_max 5 ',
-                'options': '-vn '
-                           '-bufsize 64k'
-            }
-        else:
+        if q is None:
             await self.send_embed(
-                ctx, 'Source not found', color=discord.Colour.red())
+                ctx, "Nothing to play ¯\\_(ツ)_/¯", color=discord.Colour.red()
+            )
             return
 
         try:
@@ -294,8 +230,47 @@ class Music(commands.Cog):
                 color=discord.Colour.red())
             return
 
-        await self.send_embed(ctx, f'Playing **{song.name}**')
-        self.log(ctx.author.nick, song.id)
+        await self.player(ctx, q)
+
+    async def player(self, ctx: commands.Context, queue_pos: QueuePos):
+
+        def after_play(error):
+            self.music.del_from_queue(queue_pos.id)
+
+            if error:
+                print(error)
+                return
+            vc = get(self.bot.voice_clients, guild=ctx.guild)
+            if not vc:
+                return
+
+            q = self.music.get_first_in_queue(ctx.guild.id)
+            if q is None:
+                coro = self.disconnect(ctx)
+            else:
+                coro = self.player(ctx, q)
+            future = run_coroutine_threadsafe(
+                coro, self.bot.loop)
+            try:
+                future.result(10)
+            except CancelledError:
+                print('Pizda')
+
+        source = self.yt.extract_audio_info(queue_pos.song.url).audio_source
+        ffmpeg_opts = {
+            'before_options': '-analyzeduration 0 '
+                              '-re '
+                              '-reconnect 1 '
+                              '-reconnect_streamed 1 '
+                              '-reconnect_delay_max 5 ',
+            'options': '-vn '
+                       '-bufsize 64k'
+        }
+
+        await self.send_embed(ctx, f'Playing **{queue_pos.song.name}**')
+        self.music.add_to_history(
+            ctx.author.nick, queue_pos.song.id, ctx.guild.id
+        )
 
         ctx.voice_client.play(
             discord.PCMVolumeTransformer(
@@ -328,32 +303,39 @@ class Music(commands.Cog):
             ctx.voice_client.source.volume = self._music_volume
 
     @commands.command(aliases=['q'])
-    async def queue(self, ctx: commands.Context, act: str = None, *args: str):
+    async def queue(
+        self,
+        ctx: commands.Context,
+        act: QueueActions = QueueActions.LIST,
+        *args: str
+    ):
+        """Управление очередь воспроизведения"""
+
         match act:
-            case 'add':
-                song = self.get_song_db(*args)
-                if song is None:
-                    song = await self.add(ctx, *args)
-                self.pg.add(QueuePos(song))
+
+            case QueueActions.ADD:
+                song = self.get_saved_song(*args) or await self.add(ctx, *args)
+                self.music.add_to_queue(song, ctx.guild.id)
                 await self.send_embed(ctx, f'**{song.name}** added to queue')
-            case 'del':
+
+            case QueueActions.DELETE:
                 if not (len(args) == 1 and args[0].isnumeric()):
                     await self.send_embed(
                         ctx, 'This is not id', color=discord.Colour.red())
                     return
-                q = self.pg.execute(
-                    sa.select(
-                        QueuePos).where(QueuePos.id == args[0])).scalar_one()
-                self.pg.delete(q)
+                queue_pos = int(args[0])
+                q = self.music.get_from_queue(queue_pos)
+                self.music.del_from_queue(q.id)
                 await self.send_embed(
-                    ctx, f'**{q.song.name}** removed from queue')
-            case None:
-                q = self.pg.execute(sa.select(QueuePos)).scalars().all()
+                    ctx, f'**{q.song.name}** removed from queue'
+                )
+
+            case QueueActions.LIST:
+                queue = self.music.get_queue(ctx.guild.id)
                 msg = ''
-                for pos in q:
+                for pos in queue:
                     msg += f'{pos.id}.  {pos.song.name}\n'
                 await self.send_embed(ctx, msg, title='Queue')
-        self.pg.commit()
 
 
 async def setup(bot: commands.Bot):

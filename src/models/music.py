@@ -17,10 +17,6 @@ class Song(BaseOrm):
         'sa': sa.Column(sa.VARCHAR(128))
     })
 
-    filename: t.Optional[str] = dc.field(default=None, metadata={
-        'sa': sa.Column(sa.VARCHAR(64), unique=True)
-    })
-
     url: t.Optional[str] = dc.field(default=None, metadata={
         'sa': sa.Column(sa.VARCHAR(64), unique=True)
     })
@@ -46,6 +42,10 @@ class Playback(BaseOrm):
         'sa': sa.Column(sa.VARCHAR(64))
     })
 
+    guild_id: int = dc.field(metadata={
+        'sa': sa.Column(sa.BIGINT)
+    })
+
     date: datetime = dc.field(default_factory=datetime, metadata={
         'sa': sa.Column(sa.TIMESTAMP)
     })
@@ -64,8 +64,8 @@ class QueuePos(BaseOrm):
         'sa': relation(lambda: Song)
     })
 
-    guild_id: str = dc.field(metadata={
-        'sa': sa.Column(sa.VARCHAR(64))
+    guild_id: int = dc.field(metadata={
+        'sa': sa.Column(sa.BIGINT)
     })
 
     song_id: t.Optional[int] = dc.field(default=None, metadata={

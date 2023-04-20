@@ -13,8 +13,8 @@ class Guild(BaseOrm):
     __tablename__ = 'guilds'
     __table_args__ = {'schema': 'misc'}
 
-    id: str = dc.field(metadata={
-        'sa': sa.Column(sa.VARCHAR(128), primary_key=True)
+    id: int = dc.field(metadata={
+        'sa': sa.Column(sa.BIGINT, primary_key=True)
     })
 
     settings: dict = dc.field(default_factory=dict, metadata={

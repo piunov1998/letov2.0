@@ -8,23 +8,29 @@ from models import exceptions
 
 
 @dc.dataclass
-class AudioInfo:
+class MusicInfo:
     """Информация об песни с YT"""
 
     title: str = dc.field()
     url: str = dc.field()
+    audio_source: str = dc.field()
     duration: int = dc.field(default=0)
 
 
 class YouTubeAdapter:
 
     @staticmethod
-    def validate_url(url):
-        if not re.fullmatch(r'https?://(?:www\.)?youtu(?:\.be|be\.com)/\S+', url):
+    def validate_url(url, safe: bool = False) -> bool:
+        exp = re.compile(r'https?://(?:www\.)?youtu(?:\.be|be\.com)/\S+')
+        if not re.fullmatch(exp, url):
+            if safe:
+                return False
             raise exceptions.WrongURL('Invalid URL was given')
 
+        return True
+
     @staticmethod
-    def extract_audio_info(link: str) -> AudioInfo:
+    def extract_audio_info(link: str) -> MusicInfo:
         """Получение информации о песне из YT"""
 
         ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
@@ -36,17 +42,18 @@ class YouTubeAdapter:
                 if f['acodec'] != 'none' and f['vcodec'] == 'none'
             )
         title = info['title']
-        url = song_format['url']
+        url = f'https://youtu.be/{info["id"]}'
+        audio_source = song_format['url']
         # TODO: добавить больше параметров
-        return AudioInfo(title, url)
+        return MusicInfo(title, url, audio_source)
 
     @classmethod
-    def search(cls, key: str, limit: int = None) -> list[AudioInfo]:
+    def search(cls, key: str, limit: int = None) -> list[MusicInfo]:
         """Поиск песен на YT"""
 
         result = []
         search_results = YoutubeSearch(key, limit)
-        for video in search_results:
+        for video in search_results.videos:
             url = f'https://youtu.be/{video["id"]}'
             result.append(cls.extract_audio_info(url))
 

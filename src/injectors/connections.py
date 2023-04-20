@@ -29,6 +29,7 @@ def init_db():
     engine = create_engine()
     with engine.begin():
         engine.execute('CREATE SCHEMA IF NOT EXISTS music;')
+        engine.execute('CREATE SCHEMA IF NOT EXISTS misc;')
         engine.run_callable(
             BaseOrm.REGISTRY.metadata.create_all
-            )
+        )
