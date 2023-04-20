@@ -64,6 +64,10 @@ class QueuePos(BaseOrm):
         'sa': relation(lambda: Song)
     })
 
+    guild_id: str = dc.field(metadata={
+        'sa': sa.Column(sa.VARCHAR(64))
+    })
+
     song_id: t.Optional[int] = dc.field(default=None, metadata={
         'sa': sa.Column(sa.Integer, sa.ForeignKey(
             'music.music.id', onupdate='CASCADE', ondelete='CASCADE'))
