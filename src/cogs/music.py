@@ -376,7 +376,7 @@ class Music(commands.Cog):
                     await self.send_embed(
                         ctx, 'This is not id', color=discord.Colour.red())
                     return
-                queue_pos = int(args[0])
+                queue_pos = int(args[0]) - 1
                 queue = self.music.get_queue(ctx.guild.id)
                 q = queue[queue_pos]
                 self.music.del_from_queue(q.id)
@@ -388,7 +388,7 @@ class Music(commands.Cog):
                 queue = self.music.get_queue(ctx.guild.id)
                 msg = ''
                 for i, pos in enumerate(queue):
-                    msg += f'{i: >{len(str(len(queue)))}}.  {pos.song.name}\n'
+                    msg += f'{i + 1: >{len(str(len(queue)))}}.  {pos.song.name}\n'
                 await self.send_embed(ctx, msg, title='Queue')
 
 
