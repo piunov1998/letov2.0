@@ -1,8 +1,10 @@
+import asyncio
 import enum
 import math
 from asyncio import run_coroutine_threadsafe, CancelledError
 
 import discord
+import discord.ui
 from discord.ext import commands
 from discord.utils import get
 
@@ -76,7 +78,7 @@ class Music(commands.Cog):
             )
         await ctx.send(embed=embed)
 
-    def get_saved_song(self, *args: str) -> Song:
+    async def get_saved_song(self, ctx: commands.Context, *args: str) -> Song | None:
         """Получение сохраненной песни"""
 
         if len(args) == 1 and args[0].isnumeric():
@@ -87,7 +89,50 @@ class Music(commands.Cog):
             song = self.music.get_song_by_url(url)
         else:
             key_words = list(args)
-            song = self.music.find_songs(key_words, 1)[0]
+            songs = self.music.find_songs(key_words, 24)
+            if len(songs) == 0:
+                song = None
+            elif len(songs) == 1:
+                song = songs[0]
+            else:
+                song = await self.select_saved_song(ctx, songs, key_words)
+
+        return song
+
+    async def select_saved_song(self, ctx: commands.Context, songs: list[Song], match: list[str] = None) -> Song:
+        """Выбор песни через UI"""
+
+        song = None
+        event = asyncio.Event()
+
+        rows = []
+        select = discord.ui.Select(placeholder="Select song")
+
+        for i, song in enumerate(songs):
+            row = song.name
+            if match:
+                for word in match:
+                    row = row.replace(word, f"__**{word}**__")
+            rows.append(f"{i + 1}. {row}")
+            select.add_option(label=song.name, value=str(song.id))
+
+        async def callback(interaction: discord.Interaction):
+            await interaction.message.delete()
+            response: discord.InteractionResponse = interaction.response  # type: ignore
+            song_id = interaction.data['values'][0]
+            locals()['song'] = self.music.get_song_by_id(song_id)
+            response.is_done()
+            event.set()
+
+        select.callback = callback
+
+        view = discord.ui.View(timeout=30)
+        view.add_item(select)
+
+        msg = '\n'.join(rows)
+        await ctx.send(msg, view=view)
+
+        await event.wait()
 
         return song
 
@@ -101,7 +146,7 @@ class Music(commands.Cog):
         await ctx.voice_client.disconnect(force=False)
 
     @commands.command()
-    async def add(self, ctx: commands.Context, *args) -> Song:
+    async def add(self, ctx: commands.Context, *args) -> Song | None:
         """Добавление песни"""
 
         args = ' '.join(args)
@@ -109,13 +154,13 @@ class Music(commands.Cog):
         if self.yt.validate_url(args, safe=True):
             music_info = self.yt.extract_audio_info(args)
         else:
-            music_info = self.yt.search(args, 1)
+            music_info = self.yt.search(args, 1)[0]
 
         try:
             song = self.music.add_song(music_info.title, music_info.url)
         except exceptions.DuplicateSong as e:
             await self.send_embed(ctx, str(e), color=discord.Colour.red())
-            return self.get_saved_song(*args)
+            return None
         await self.send_embed(
             ctx, f'Added **{song.name}**', color=discord.Colour.green())
 
@@ -314,7 +359,7 @@ class Music(commands.Cog):
         match act:
 
             case QueueActions.ADD:
-                song = self.get_saved_song(*args) or await self.add(ctx, *args)
+                song = await self.get_saved_song(ctx, *args) or await self.add(ctx, *args)
                 self.music.add_to_queue(song, ctx.guild.id)
                 await self.send_embed(ctx, f'**{song.name}** added to queue')
 
