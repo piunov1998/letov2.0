@@ -130,9 +130,15 @@ class Music(commands.Cog):
         view.add_item(select)
 
         msg = '\n'.join(rows)
-        await ctx.send(msg, view=view)
+        msg = await ctx.send(msg, view=view)
+
+        async def timeout():
+            await msg.delete()
+
+        view.on_timeout = timeout
 
         await event.wait()
+        view.stop()
 
         return song
 
