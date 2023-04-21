@@ -84,6 +84,10 @@ async def on_command_error(
             color=discord.Colour.red(),
             img=img_url
         )
+        text = "**Experienced bug? Help to improve bot, create issue and " \
+               "describe your problem:** " \
+               "https://github.com/piunov1998/letov2.0/issues"
+        await ctx.send(text)
         logging.error(
             f'''{tc.bold}{tc.header}Error occurred{tc.end}
             {tc.bold}{tc.underline}Command:{tc.end} {ctx.command}
