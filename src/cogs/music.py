@@ -379,9 +379,10 @@ class Music(commands.Cog):
                 queue_pos = int(args[0]) - 1
                 queue = self.music.get_queue(ctx.guild.id)
                 q = queue[queue_pos]
+                song_name = q.song.name
                 self.music.del_from_queue(q.id)
                 await self.send_embed(
-                    ctx, f'**{q.song.name}** removed from queue'
+                    ctx, f'**{song_name}** removed from queue'
                 )
 
             case QueueActions.LIST:
