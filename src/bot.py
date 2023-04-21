@@ -78,16 +78,21 @@ async def on_command_error(
         await send_embed(ctx, error.original.msg, color=discord.Colour.red())
     else:
         img_url = 'https://i.ibb.co/Pc7W8k9/index.jpg'
-        await send_embed(ctx,
-                         f'{ctx.author.nick},',
-                         color=discord.Colour.red(),
-                         img=img_url
-                         )
+        await send_embed(
+            ctx,
+            f'{ctx.author.nick},',
+            color=discord.Colour.red(),
+            img=img_url
+        )
         logging.error(
             f'''{tc.bold}{tc.header}Error occurred{tc.end}
             {tc.bold}{tc.underline}Command:{tc.end} {ctx.command}
             {tc.bold}{tc.underline}Error log:{tc.end}
-            {tc.red}{error}{tc.end}''')
+            {tc.red}{error.with_traceback(None)}{tc.end}'''
+        )
+
+        from traceback import print_exception
+        print_exception(error)
 
 
 async def setup_extensions():
