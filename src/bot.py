@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import signal
 
 import discord
 from discord.ext import commands
@@ -96,7 +97,15 @@ async def setup_extensions():
             logging.info(f'Module {filename[:-3]} loaded')
 
 
+def sigterm_handler(*_):
+    """Обработчик сигнала завершения"""
+
+    signal.raise_signal(signal.SIGINT)
+
+
 async def run():
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     async with bot:
         await setup_extensions()
         logging.info('Connecting to gateway')
