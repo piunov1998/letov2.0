@@ -325,6 +325,8 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['v'])
     async def volume(self, ctx: commands.Context, volume: str = None):
+        """Управление громкостью воспроизведения"""
+
         if volume is None:
             await self.send_embed(
                 ctx, f'Current volume is **{self.music_volume_exp}%**')
@@ -344,7 +346,7 @@ class Music(commands.Cog):
         await self.send_embed(
             ctx, f'Volume set to **{self.music_volume_exp}%**',
             color=discord.Colour.from_rgb(227, 178, 43))
-        if ctx.voice_client is not None and ctx.voice_client.is_playing():
+        if self.is_playing(ctx):
             ctx.voice_client.source.volume = self._music_volume
 
     @commands.command(aliases=['q'])
