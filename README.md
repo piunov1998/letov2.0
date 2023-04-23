@@ -1,10 +1,13 @@
 # LETOV vol.2 | Discord Music Bot
 
->old version: https://github.com/drews54/Discord-Music-Bot
+Бот для проигрывания музыки в голосовых каналах discord
+
+> old version: https://github.com/drews54/Discord-Music-Bot
 
 ## Installation and configuration
 
 ### docker-compose
+
 ```yaml
 version: "3"
 
