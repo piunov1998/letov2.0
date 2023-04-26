@@ -99,10 +99,15 @@ class Music(commands.Cog):
 
         return song
 
-    async def select_saved_song(self, ctx: commands.Context, songs: list[Song], match: list[str] = None) -> Song:
+    async def select_saved_song(
+        self,
+        ctx: commands.Context,
+        songs: list[Song],
+        match: list[str] = None
+    ) -> Song:
         """Выбор песни через UI"""
 
-        song = None
+        song_list: dict[str, Song | None] = {'chosen_song': None}
         event = asyncio.Event()
 
         rows = []
@@ -120,7 +125,7 @@ class Music(commands.Cog):
             await interaction.message.delete()
             response: discord.InteractionResponse = interaction.response  # type: ignore
             song_id = interaction.data['values'][0]
-            locals()['song'] = self.music.get_song_by_id(song_id)
+            song_list['chosen_song'] = self.music.get_song_by_id(song_id)
             response.is_done()
             event.set()
 
@@ -140,7 +145,7 @@ class Music(commands.Cog):
         await event.wait()
         view.stop()
 
-        return song
+        return song_list['chosen_song']
 
     async def connect(self, ctx: commands.Context):
         status = get(self.bot.voice_clients, guild=ctx.guild)
