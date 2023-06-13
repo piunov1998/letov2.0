@@ -22,8 +22,8 @@ class MusicAdapter:
         if limit > 0:
             query = query.limit(limit)
 
-        song = self.pg.execute(query).scalars().all()
-        return song
+        songs = self.pg.execute(query).scalars().all()
+        return songs
 
     def get_first_in_queue(self, guild_id: int) -> QueuePos:
         """Получение первой песни в очереди"""

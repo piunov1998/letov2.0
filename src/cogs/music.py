@@ -208,7 +208,7 @@ class Music(commands.Cog):
         description = ''
 
         for song in songs:
-            row = f'{song.id}. {song.name}\n'
+            row = f'( **{song.id}** )  {song.name}\n'
             if len(description + row) < 4000:
                 description += row
                 continue
