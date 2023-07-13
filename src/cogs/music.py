@@ -226,7 +226,7 @@ class Music(commands.Cog):
             color=discord.Colour.from_rgb(7, 133, 70)
         )
 
-    @commands.command()
+    @commands.command(brief='Cancel playback')
     async def stop(self, ctx: commands.Context):
         try:
             await self.disconnect(ctx)
