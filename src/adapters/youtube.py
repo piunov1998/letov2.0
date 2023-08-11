@@ -39,7 +39,7 @@ class YouTubeAdapter:
             info = ydl.extract_info(link, download=False)
             song_format = next(
                 f for f in info['formats']
-                if f['acodec'] != 'none' and f['vcodec'] == 'none'
+                if f.get('acodec', 'none') != 'none' and f.get('vcodec', 'none') == 'none'
             )
         title = info['title']
         url = f'https://youtu.be/{info["id"]}'
