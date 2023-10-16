@@ -154,10 +154,10 @@ class Music(commands.Cog):
             ctx: commands.Context,
             songs: list[MusicInfo],
             match: Iterable[str] = None
-    ) -> Song:
+    ) -> MusicInfo:
         """Выбор песни через UI"""
 
-        song_list: dict[str, Song | None] = {'chosen_song': None}
+        song_list: dict[str, MusicInfo | None] = {'chosen_song': None}
         event = asyncio.Event()
 
         rows = []
@@ -170,13 +170,13 @@ class Music(commands.Cog):
                 for word in match:
                     row = row.replace(word, f"__**{word}**__")
             rows.append(f"{i + 1}. {row} (@{song.channel}) - {song.duration // 60}:{song.duration % 60:0>2}")
-            select.add_option(label=song.name, value=str(i))
+            select.add_option(label=f"{i + 1}. {song.name} (@{song.channel})", value=str(i))
 
         async def callback(interaction: discord.Interaction):
             await interaction.message.delete()
             response: discord.InteractionResponse = interaction.response  # type: ignore
-            song_id = interaction.data['values'][0]
-            song_list['chosen_song'] = self.music.add_song(songs[song_id].name, songs[song_id].url)
+            song_id = int(interaction.data['values'][0])
+            song_list['chosen_song'] = songs[song_id]
             response.is_done()
             event.set()
 
@@ -216,8 +216,10 @@ class Music(commands.Cog):
         if self.yt.validate_url(args_str, safe=True):
             music_info = self.yt.extract_audio_info(args_str)
         else:
+            await self.send_embed(
+                ctx, f'Searching **{args_str}** on YouTube...', color=discord.Colour.yellow())
             search_result = self.yt.search(args_str, 5)
-            music_info = self.select_song_from_search(ctx, search_result, args)
+            music_info = await self.select_song_from_search(ctx, search_result, args)
 
         try:
             song = self.music.add_song(music_info.name, music_info.url)
