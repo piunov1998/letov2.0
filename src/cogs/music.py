@@ -2,6 +2,7 @@ import asyncio
 import enum
 import math
 from asyncio import run_coroutine_threadsafe, CancelledError
+from typing import Iterable
 
 import discord
 import discord.ui
@@ -9,6 +10,7 @@ from discord.ext import commands
 from discord.utils import get
 
 from adapters import YouTubeAdapter, MusicAdapter
+from adapters.youtube import MusicInfo
 from models import exceptions
 from models.music import Song, QueuePos
 
@@ -147,6 +149,55 @@ class Music(commands.Cog):
 
         return song_list['chosen_song']
 
+    async def select_song_from_search(
+            self,
+            ctx: commands.Context,
+            songs: list[MusicInfo],
+            match: Iterable[str] = None
+    ) -> Song:
+        """Выбор песни через UI"""
+
+        song_list: dict[str, Song | None] = {'chosen_song': None}
+        event = asyncio.Event()
+
+        rows = []
+        select = discord.ui.Select(placeholder="Select song")
+
+        for i, song in enumerate(songs):
+            song: MusicInfo
+            row = song.name
+            if match:
+                for word in match:
+                    row = row.replace(word, f"__**{word}**__")
+            rows.append(f"{i + 1}. {row} (@{song.channel}) - {song.duration // 60}:{song.duration % 60:0>2}")
+            select.add_option(label=song.name, value=str(i))
+
+        async def callback(interaction: discord.Interaction):
+            await interaction.message.delete()
+            response: discord.InteractionResponse = interaction.response  # type: ignore
+            song_id = interaction.data['values'][0]
+            song_list['chosen_song'] = self.music.add_song(songs[song_id].name, songs[song_id].url)
+            response.is_done()
+            event.set()
+
+        select.callback = callback
+
+        view = discord.ui.View(timeout=30)
+        view.add_item(select)
+
+        msg = '\n'.join(rows)
+        msg = await ctx.send(msg, view=view)
+
+        async def timeout():
+            await msg.delete()
+
+        view.on_timeout = timeout
+
+        await event.wait()
+        view.stop()
+
+        return song_list['chosen_song']
+
     async def connect(self, ctx: commands.Context):
         status = get(self.bot.voice_clients, guild=ctx.guild)
         if not status:
@@ -157,18 +208,19 @@ class Music(commands.Cog):
         await ctx.voice_client.disconnect(force=False)
 
     @commands.command()
-    async def add(self, ctx: commands.Context, *args) -> Song | None:
+    async def add(self, ctx: commands.Context, *args: str) -> Song | None:
         """Добавление песни"""
 
-        args = ' '.join(args)
+        args_str = ' '.join(args)
 
-        if self.yt.validate_url(args, safe=True):
-            music_info = self.yt.extract_audio_info(args)
+        if self.yt.validate_url(args_str, safe=True):
+            music_info = self.yt.extract_audio_info(args_str)
         else:
-            music_info = self.yt.search(args, 1)[0]
+            search_result = self.yt.search(args_str, 5)
+            music_info = self.select_song_from_search(ctx, search_result, args)
 
         try:
-            song = self.music.add_song(music_info.title, music_info.url)
+            song = self.music.add_song(music_info.name, music_info.url)
         except exceptions.DuplicateSong as e:
             await self.send_embed(ctx, str(e), color=discord.Colour.red())
             return None

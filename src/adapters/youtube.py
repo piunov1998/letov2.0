@@ -11,9 +11,10 @@ from models import exceptions
 class MusicInfo:
     """Информация об песни с YT"""
 
-    title: str = dc.field()
+    name: str = dc.field()
     url: str = dc.field()
     audio_source: str = dc.field()
+    channel: str = dc.field()
     duration: int = dc.field(default=0)
 
 
@@ -41,11 +42,15 @@ class YouTubeAdapter:
                 f for f in info['formats']
                 if f.get('acodec', 'none') != 'none' and f.get('vcodec', 'none') == 'none'
             )
-        title = info['title']
-        url = f'https://youtu.be/{info["id"]}'
-        audio_source = song_format['url']
-        # TODO: добавить больше параметров
-        return MusicInfo(title, url, audio_source)
+
+        music_info = MusicInfo(
+            name=info['title'],
+            url=f'https://youtu.be/{info["id"]}',
+            audio_source=song_format['url'],
+            channel=info['channel'],
+            duration=info['duration'],
+        )
+        return music_info
 
     @classmethod
     def search(cls, key: str, limit: int = None) -> list[MusicInfo]:
