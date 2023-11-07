@@ -155,7 +155,7 @@ class Music(commands.Cog):
             songs: list[MusicInfo],
             match: Iterable[str] = None
     ) -> MusicInfo:
-        """Выбор песни через UI"""
+        """Выбор песни в поиске через UI"""
 
         song_list: dict[str, MusicInfo | None] = {'chosen_song': None}
         event = asyncio.Event()
@@ -169,7 +169,7 @@ class Music(commands.Cog):
             if match:
                 for word in match:
                     row = row.replace(word, f"__**{word}**__")
-            rows.append(f"{i + 1}. {row} (@{song.channel}) - {song.duration // 60}:{song.duration % 60:0>2}")
+            rows.append(f"{i + 1}. {row} (@{song.channel}) - {song.duration}")
             select.add_option(label=f"{i + 1}. {song.name} (@{song.channel})", value=str(i))
 
         async def callback(interaction: discord.Interaction):

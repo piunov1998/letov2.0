@@ -13,9 +13,9 @@ class MusicInfo:
 
     name: str = dc.field()
     url: str = dc.field()
-    audio_source: str = dc.field()
     channel: str = dc.field()
-    duration: int = dc.field(default=0)
+    audio_source: str | None = dc.field(default="")
+    duration: str = dc.field(default="0:00")
 
 
 class YouTubeAdapter:
@@ -59,7 +59,11 @@ class YouTubeAdapter:
         result = []
         search_results = YoutubeSearch(key, limit)
         for video in search_results.videos:
-            url = f'https://youtu.be/{video["id"]}'
-            result.append(cls.extract_audio_info(url))
+            result.append(MusicInfo(
+                url=f'https://youtu.be/{video["id"]}',
+                name=video["title"],
+                duration=video["duration"],
+                channel=video["channel"]
+            ))
 
         return result
