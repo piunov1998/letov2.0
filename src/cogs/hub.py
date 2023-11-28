@@ -17,9 +17,10 @@ class Hub(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         await self.bot.tree.sync(guild=discord.Object(id=358780693595291652))
+        await self.bot.tree.sync()
 
     @app_commands.command(
-        name="get_key",
+        name="hub",
         description="Generate URL with key to access Letov Hub",
     )
     async def issue_token(self, interaction: discord.Interaction):
