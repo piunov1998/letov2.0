@@ -28,11 +28,15 @@ bot = commands.Bot(
 )
 
 
-async def send_embed(ctx: commands.Context, msg: str, *,
-                     title: str = None,
-                     color: discord.Colour = discord.Colour.blue(),
-                     url: str = None,
-                     img: str = None):
+async def send_embed(
+    ctx: commands.Context,
+    msg: str,
+    *,
+    title: str = None,
+    color: discord.Colour = discord.Colour.blue(),
+    url: str = None,
+    img: str = None
+):
     embed = discord.Embed()
     if title:
         embed.title = title
@@ -59,8 +63,8 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(
-        ctx: commands.Context,
-        error: commands.CommandInvokeError
+    ctx: commands.Context,
+    error: commands.CommandInvokeError
 ):
     if isinstance(error, commands.CommandNotFound):
         await send_embed(
@@ -84,10 +88,6 @@ async def on_command_error(
             color=discord.Colour.red(),
             img=img_url
         )
-        text = "**Experienced bug? Help to improve bot, create issue and " \
-               "describe your problem:** " \
-               "https://github.com/piunov1998/letov2.0/issues"
-        await ctx.send(text)
         logging.error(
             f'''{tc.bold}{tc.header}Error occurred{tc.end}
             {tc.bold}{tc.underline}Command:{tc.end} {ctx.command}
