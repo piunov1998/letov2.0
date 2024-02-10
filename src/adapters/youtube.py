@@ -1,6 +1,7 @@
 import dataclasses as dc
 import re
 
+import yt_dlp.utils
 from youtube_search import YoutubeSearch
 from yt_dlp import YoutubeDL
 
@@ -37,7 +38,10 @@ class YouTubeAdapter:
         ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
 
         with YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(link, download=False)
+            try:
+                info = ydl.extract_info(link, download=False)
+            except yt_dlp.utils.DownloadError as e:
+                raise exceptions.VideoIsUnavailable(link, e.msg)
             song_format = next(
                 f for f in info['formats']
                 if f.get('acodec', 'none') != 'none' and f.get('vcodec', 'none') == 'none'

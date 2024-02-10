@@ -79,14 +79,12 @@ async def on_command_error(
     elif isinstance(error, commands.NotOwner):
         await ctx.send(f"Error: {error}")
     elif isinstance(error.original, BotException):
-        await send_embed(ctx, error.original.msg, color=discord.Colour.red())
+        await send_embed(ctx, error.original.__str__(), color=discord.Colour.red())
     else:
-        img_url = 'https://i.ibb.co/Pc7W8k9/index.jpg'
         await send_embed(
             ctx,
-            f'{ctx.author.nick},',
+            f'Unexpected error: {error}',
             color=discord.Colour.red(),
-            img=img_url
         )
         logging.error(
             f'''{tc.bold}{tc.header}Error occurred{tc.end}

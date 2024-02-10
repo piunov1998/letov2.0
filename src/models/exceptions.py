@@ -1,18 +1,4 @@
-import dataclasses as dc
-
-
-@dc.dataclass
 class BotException(Exception):
-    """Base bot exception"""
-
-    msg: str = dc.field(default='error')
-
-
-class WrongURL(BotException):
-    """URL validation error"""
-
-
-class BaseBotException(Exception):
     MESSAGE = "base error"
 
     @classmethod
@@ -20,5 +6,28 @@ class BaseBotException(Exception):
         return cls.MESSAGE
 
 
-class DuplicateSong(BaseBotException):
+class WrongURL(BotException):
+    """URL validation error"""
+
+    MESSAGE = "Wrong URL"
+
+
+class DuplicateSong(BotException):
     MESSAGE = "Song with this source is already in database"
+
+
+class VideoIsUnavailable(BotException):
+
+    def __init__(self, url: str = None, extra: str = None):
+        self.url = url
+        self.extra = extra
+
+    MESSAGE = "Requested song is unavailable"
+
+    def __str__(self):
+        msg = self.MESSAGE
+        if self.url:
+            msg += f" ({self.url})"
+        if self.extra:
+            msg += f" -> {self.extra}"
+        return msg

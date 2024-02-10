@@ -45,7 +45,7 @@ class Music(commands.Cog):
         """Проверка идет ли воспроизведение в данный момент"""
 
         return ctx.voice_client is not None and (
-            ctx.voice_client.is_playing() or ctx.voice_client.is_paused()
+                ctx.voice_client.is_playing() or ctx.voice_client.is_paused()
         )
 
     @classmethod
@@ -54,13 +54,13 @@ class Music(commands.Cog):
 
     @classmethod
     async def send_embed(
-        cls,
-        ctx: commands.Context, msg: str,
-        *,
-        title: str = None,
-        color: discord.Colour = discord.Colour.blue(),
-        url: str = None,
-        img: str = None
+            cls,
+            ctx: commands.Context, msg: str,
+            *,
+            title: str = None,
+            color: discord.Colour = discord.Colour.blue(),
+            url: str = None,
+            img: str = None
     ):
         embed = discord.Embed()
         if title:
@@ -102,10 +102,10 @@ class Music(commands.Cog):
         return song
 
     async def select_saved_song(
-        self,
-        ctx: commands.Context,
-        songs: list[Song],
-        match: list[str] = None
+            self,
+            ctx: commands.Context,
+            songs: list[Song],
+            match: list[str] = None
     ) -> Song:
         """Выбор песни через UI"""
 
@@ -366,7 +366,11 @@ class Music(commands.Cog):
             except CancelledError:
                 print('Pizda')
 
-        source = self.yt.extract_audio_info(queue_pos.song.url).audio_source
+        try:
+            source = self.yt.extract_audio_info(queue_pos.song.url).audio_source
+        except Exception:
+            await self.stop(ctx)
+            raise
         ffmpeg_opts = {
             'before_options': '-analyzeduration 0 '
                               '-re '
@@ -416,10 +420,10 @@ class Music(commands.Cog):
 
     @commands.command(aliases=['q'])
     async def queue(
-        self,
-        ctx: commands.Context,
-        act: QueueActions = QueueActions.LIST,
-        *args: str
+            self,
+            ctx: commands.Context,
+            act: QueueActions = QueueActions.LIST,
+            *args: str
     ):
         """Управление очередь воспроизведения"""
 
