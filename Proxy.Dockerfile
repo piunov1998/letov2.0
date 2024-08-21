@@ -6,4 +6,4 @@ FROM scratch
 COPY --from=build /go/bin/spoof-dpi /opt/spoof-dpi
 
 WORKDIR /opt
-CMD ["./spoof-dpi"]
+CMD ["./spoof-dpi", "-addr", "0.0.0.0", "-no-banner"]
