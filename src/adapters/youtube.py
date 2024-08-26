@@ -35,7 +35,7 @@ class YouTubeAdapter:
     def extract_audio_info(link: str) -> MusicInfo:
         """Получение информации о песне из YT"""
 
-        ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
+        ydl_opts = {'format': 'bestaudio', 'noplaylist': True, 'proxy': 'http://proxy:8080'}
 
         with YoutubeDL(ydl_opts) as ydl:
             try:

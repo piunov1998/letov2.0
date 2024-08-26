@@ -377,8 +377,9 @@ class Music(commands.Cog):
                               '-reconnect 1 '
                               '-reconnect_streamed 1 '
                               '-reconnect_delay_max 5 ',
+            '-http-proxy http://proxy:8080 '
             'options': '-vn '
-                       '-bufsize 64k'
+                       '-bufsize 64k '
         }
 
         await self.send_embed(ctx, f'Playing **{queue_pos.song.name}**')
