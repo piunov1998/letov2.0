@@ -376,8 +376,8 @@ class Music(commands.Cog):
                               '-re '
                               '-reconnect 1 '
                               '-reconnect_streamed 1 '
-                              '-reconnect_delay_max 5 ',
-            '-http-proxy http://proxy:8080 '
+                              '-reconnect_delay_max 5 '
+                              '-http-proxy http://proxy:8080 ',
             'options': '-vn '
                        '-bufsize 64k '
         }
