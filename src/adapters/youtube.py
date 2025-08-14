@@ -1,4 +1,5 @@
 import dataclasses as dc
+import logging
 import re
 
 import yt_dlp.utils
@@ -35,17 +36,24 @@ class YouTubeAdapter:
     def extract_audio_info(link: str) -> MusicInfo:
         """Получение информации о песне из YT"""
 
-        ydl_opts = {'format': 'bestaudio', 'noplaylist': True, 'proxy': 'http://proxy:8080'}
+        ydl_opts = {'format': 'bestaudio', 'noplaylist': True}
 
         with YoutubeDL(ydl_opts) as ydl:
             try:
                 info = ydl.extract_info(link, download=False)
             except yt_dlp.utils.DownloadError as e:
                 raise exceptions.VideoIsUnavailable(link, e.msg)
-            song_format = next(
-                f for f in info['formats']
-                if f.get('acodec', 'none') != 'none' and f.get('vcodec', 'none') == 'none'
-            )
+
+            formats = info.get("formats") or []
+            candidates = [
+                f for f in formats
+                if f.get("acodec") and f["acodec"] != "none" and f.get("vcodec") in (None, "none")
+            ]
+
+            song_format = candidates[0] if candidates else None
+            if not song_format or not song_format.get("url"):
+                logging.error(f"no audio in {formats}")
+                raise ValueError("Не удалось найти подходящий аудиоформат")
 
         music_info = MusicInfo(
             name=info['title'],
