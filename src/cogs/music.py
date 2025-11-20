@@ -165,12 +165,15 @@ class Music(commands.Cog):
 
         for i, song in enumerate(songs):
             song: MusicInfo
-            row = song.name
+            song_name = song.name
             if match:
                 for word in match:
-                    row = row.replace(word, f"__**{word}**__")
-            rows.append(f"{i + 1}. {row} (@{song.channel}) - {song.duration}")
-            select.add_option(label=f"{i + 1}. {song.name} (@{song.channel})", value=str(i))
+                    song_name = song_name.replace(word, f"__**{word}**__")
+            rows.append(f"{i + 1}. {song_name} (@{song.channel}) - {song.duration}")
+
+            label = f"{i + 1}. {{}} (@{song.channel})"
+            label = label.format(song.name[:min(102 - len(label), len(song.name))])
+            select.add_option(label=label, value=str(i))
 
         async def callback(interaction: discord.Interaction):
             await interaction.message.delete()
